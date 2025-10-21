@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>超简单测试</title>
+</head>
+<body>
+    <h1>超简单API测试</h1>
+    <div id="output" style="font-family: monospace; white-space: pre-wrap; background: #f5f5f5; padding: 20px;"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        fetch('/search?suburb=Belmont+North')
+            .then(response => {
+                output.innerHTML += 'Status: ' + response.status + '\n';
+                output.innerHTML += 'Content-Type: ' + response.headers.get('content-type') + '\n\n';
+                return response.text();
+            })
+            .then(text => {
+                output.innerHTML += 'Response length: ' + text.length + ' bytes\n';
+                output.innerHTML += 'First 500 chars:\n' + text.substring(0, 500) + '\n\n';
+                
+                try {
+                    const data = JSON.parse(text);
+                    output.innerHTML += '✅ JSON is valid!\n';
+                    output.innerHTML += 'Properties: ' + data.length + '\n';
+                    output.innerHTML += 'First property:\n' + JSON.stringify(data[0], null, 2);
+                } catch (e) {
+                    output.innerHTML += '❌ JSON parse error: ' + e.message + '\n';
+                    output.innerHTML += 'Full response:\n' + text;
+                }
+            })
+            .catch(err => {
+                output.innerHTML += '❌ Fetch error: ' + err.message;
+            });
+    </script>
+</body>
+</html>
+

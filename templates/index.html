@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microburbs Property Finder v2.1 Debug</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 40px; 
+            background: #f9fafb; 
+        }
+        input { 
+            padding: 8px; 
+            width: 250px; 
+            margin-right: 10px;
+        }
+        button { 
+            padding: 8px 12px; 
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px; 
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            text-align: left;
+        }
+        th { 
+            background: #0056b3; 
+            color: white; 
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .analytics-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-card h3 {
+            color: #0056b3;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+        .stat-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        .chart-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        .chart-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .bar-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .bar-label {
+            min-width: 100px;
+            font-weight: 500;
+        }
+        .bar {
+            height: 30px;
+            background: linear-gradient(90deg, #007bff, #0056b3);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏠 Microburbs Property Dashboard</h1>
+    <p style="color: #666; margin-bottom: 30px;">
+        Interactive property analytics and insights 
+        <span style="font-size: 0.8em; color: #999;">(v2.1 - Debug Mode)</span>
+    </p>
+    
+    <form id="searchForm">
+        <input id="suburb" placeholder="Enter suburb, e.g. Belmont North" value="Belmont North" required>
+        <button type="submit">Search Properties</button>
+    </form>
+    
+    <div id="poi"></div>
+    <div id="analytics"></div>
+    <div id="results"></div>
+
+    <script>
+        // 页面加载时自动搜索
+        window.addEventListener('load', function() {
+            searchProperties('Belmont North');
+        });
+
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const suburb = document.getElementById('suburb').value.trim();
+            if (suburb) {
+                searchProperties(suburb);
+            }
+        });
+
+        async function searchProperties(suburb) {
+            const resultsDiv = document.getElementById('results');
+            const analyticsDiv = document.getElementById('analytics');
+            const poiDiv = document.getElementById('poi');
+            
+            resultsDiv.innerHTML = '<div class="loading">🔍 Searching for properties...</div>';
+            analyticsDiv.innerHTML = '<div class="loading">📊 Loading analytics...</div>';
+            poiDiv.innerHTML = ''; // Hide POI section
+            
+            try {
+                console.log(`Searching for: ${suburb}`);
+                
+                // Fetch property and analytics data in parallel (no POI)
+                const [propertiesResponse, analyticsResponse] = await Promise.all([
+                    fetch(`/search?suburb=${encodeURIComponent(suburb)}`),
+                    fetch(`/analytics?suburb=${encodeURIComponent(suburb)}`)
+                ]);
+                
+                // Check if responses are OK
+                console.log('Properties response status:', propertiesResponse.status);
+                console.log('Analytics response status:', analyticsResponse.status);
+                
+                // Check content type
+                const propertiesContentType = propertiesResponse.headers.get('content-type');
+                const analyticsContentType = analyticsResponse.headers.get('content-type');
+                console.log('Properties content-type:', propertiesContentType);
+                console.log('Analytics content-type:', analyticsContentType);
+                
+                // Get response text first to debug
+                const propertiesText = await propertiesResponse.text();
+                const analyticsText = await analyticsResponse.text();
+                
+                console.log('Properties response (first 200 chars):', propertiesText.substring(0, 200));
+                console.log('Analytics response (first 200 chars):', analyticsText.substring(0, 200));
+                
+                // Try to parse as JSON
+                let data, analytics;
+                try {
+                    data = JSON.parse(propertiesText);
+                    console.log('✅ Properties JSON parsed successfully');
+                } catch (e) {
+                    console.error('❌ Failed to parse properties JSON:', e);
+                    console.error('Raw response:', propertiesText);
+                    throw new Error('Properties response is not valid JSON');
+                }
+                
+                try {
+                    analytics = JSON.parse(analyticsText);
+                    console.log('✅ Analytics JSON parsed successfully');
+                } catch (e) {
+                    console.error('❌ Failed to parse analytics JSON:', e);
+                    console.error('Raw response:', analyticsText);
+                    throw new Error('Analytics response is not valid JSON');
+                }
+                
+                console.log('✅ Received data:', data);
+                console.log('✅ Data length:', data.length);
+                console.log('✅ First property:', data[0]);
+                console.log('✅ Received analytics:', analytics);
+                console.log('✅ Analytics keys:', Object.keys(analytics));
+                
+                // Display analytics
+                if (analytics && !analytics.error) {
+                    displayAnalytics(analytics, suburb);
+                } else {
+                    analyticsDiv.innerHTML = '';
+                }
+                
+                // Display properties
+                if (data.error) {
+                    resultsDiv.innerHTML = `<div class="error">❌ Error: ${data.error}</div>`;
+                    return;
+                }
+                
+                if (!data || data.length === 0) {
+                    resultsDiv.innerHTML = `<div class="error">No properties found for "${suburb}"</div>`;
+                    return;
+                }
+                
+                // 构建表格HTML
+                let html = `<div class="success">✅ Found ${data.length} properties in ${suburb}</div>`;
+                html += '<table>';
+                html += '<tr><th>Address</th><th>Price</th><th>Beds</th><th>Baths</th><th>Garages</th><th>Land Size</th><th>Type</th><th>Date</th></tr>';
+                
+                data.forEach((property, index) => {
+                    // Safe price formatting with detailed logging
+                    let price = 'N/A';
+                    try {
+                        if (property.price) {
+                            const numPrice = Number(property.price);
+                            if (!isNaN(numPrice)) {
+                                price = '$' + Math.round(numPrice).toLocaleString('en-US');
+                            } else {
+                                console.warn(`Property ${index}: price is NaN`, property.price);
+                                price = '$' + property.price;
+                            }
+                        }
+                    } catch (e) {
+                        console.error(`Property ${index}: Error formatting price`, e, property.price);
+                        price = property.price ? '$' + property.price : 'N/A';
+                    }
+                    
+                    html += `
+                        <tr>
+                            <td>${property.address || 'N/A'}</td>
+                            <td>${price}</td>
+                            <td>${property.bedrooms || '?'}</td>
+                            <td>${property.bathrooms || '?'}</td>
+                            <td>${property.garages || '?'}</td>
+                            <td>${property.land_size || 'N/A'}</td>
+                            <td>${property.type || 'N/A'}</td>
+                            <td>${property.listing_date || 'N/A'}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('❌ Error details:', error);
+                console.error('Error stack:', error.stack);
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Error: ${error.message}
+                        <br><small>Check console (F12) for details</small>
+                    </div>
+                `;
+                analyticsDiv.innerHTML = '';
+                poiDiv.innerHTML = '';
+            }
+        }
+        
+        function displayPOI(poi, suburb) {
+            const poiDiv = document.getElementById('poi');
+            const highlights = poi.highlights;
+            const livability = poi.livability;
+            
+            let html = `
+                <div class="chart-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <h2 style="color: white; margin-bottom: 20px;">🗺️ Livability Score: ${Math.round(poi.amenity_score)}/100</h2>
+                    <p style="font-size: 1.1rem; opacity: 0.9;">Based on ${poi.total_pois} points of interest in ${suburb}</p>
+                </div>
+                
+                <div class="analytics-container">
+                    <div class="stat-card">
+                        <h3>🏫 Schools</h3>
+                        <div class="stat-value">${highlights.schools}</div>
+                        <div class="stat-label">${livability.has_schools ? '✓ Available' : 'Limited'}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>🛒 Supermarkets</h3>
+                        <div class="stat-value">${highlights.supermarkets}</div>
+                        <div class="stat-label">${livability.has_supermarkets ? '✓ Available' : 'Limited'}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>🍽️ Restaurants</h3>
+                        <div class="stat-value">${highlights.restaurants}</div>
+                        <div class="stat-label">${livability.has_restaurants ? '✓ Available' : 'Limited'}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>🚌 Bus Stops</h3>
+                        <div class="stat-value">${highlights.bus_stops}</div>
+                        <div class="stat-label">${livability.has_transport ? '✓ Available' : 'Limited'}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>🌳 Green Spaces</h3>
+                        <div class="stat-value">${highlights.parks}</div>
+                        <div class="stat-label">${livability.has_parks ? '✓ Available' : 'Limited'}</div>
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <h3>📍 Key Amenities</h3>
+                    <div class="bar-chart">
+            `;
+            
+            // Show top categories with examples
+            const topCategories = Object.entries(poi.categories)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+            
+            const maxCount = topCategories[0][1];
+            
+            topCategories.forEach(([category, count]) => {
+                const percentage = (count / maxCount) * 100;
+                const examples = poi.examples[category] || [];
+                const exampleText = examples.length > 0 ? ` (e.g., ${examples.slice(0, 2).join(', ')})` : '';
+                
+                html += `
+                    <div class="bar-item">
+                        <div class="bar-label" style="min-width: 120px;">${category}</div>
+                        <div class="bar" style="width: ${percentage}%">${count}</div>
+                        <div style="font-size: 0.85rem; color: #666; margin-left: 10px;">${exampleText}</div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            poiDiv.innerHTML = html;
+        }
+        
+        function displayAnalytics(analytics, suburb) {
+            const analyticsDiv = document.getElementById('analytics');
+            
+            // Safe price formatting function
+            const formatPrice = (price) => {
+                try {
+                    const num = Number(price);
+                    if (isNaN(num)) {
+                        console.warn('formatPrice: NaN value', price);
+                        return '$' + price;
+                    }
+                    return '$' + Math.round(num).toLocaleString('en-US');
+                } catch (e) {
+                    console.error('formatPrice error:', e, price);
+                    return '$' + price;
+                }
+            };
+            
+            const avgPrice = formatPrice(analytics.price_stats.average);
+            const minPrice = formatPrice(analytics.price_stats.min);
+            const maxPrice = formatPrice(analytics.price_stats.max);
+            
+            let html = `
+                <div class="analytics-container">
+                    <div class="stat-card">
+                        <h3>Total Properties</h3>
+                        <div class="stat-value">${analytics.total_properties}</div>
+                        <div class="stat-label">in ${suburb}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Average Price</h3>
+                        <div class="stat-value">${avgPrice}</div>
+                        <div class="stat-label">median market value</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Price Range</h3>
+                        <div class="stat-value">${minPrice}</div>
+                        <div class="stat-label">to ${maxPrice}</div>
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <h3>📊 Property Types Distribution</h3>
+                    <div class="bar-chart">
+            `;
+            
+            // Create bar chart for property types
+            const maxCount = Math.max(...Object.values(analytics.property_types));
+            for (const [type, count] of Object.entries(analytics.property_types)) {
+                const percentage = (count / maxCount) * 100;
+                html += `
+                    <div class="bar-item">
+                        <div class="bar-label">${type}</div>
+                        <div class="bar" style="width: ${percentage}%">${count}</div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <h3>🛏️ Bedroom Distribution</h3>
+                    <div class="bar-chart">
+            `;
+            
+            // Create bar chart for bedrooms
+            const maxBedCount = Math.max(...Object.values(analytics.bedroom_distribution));
+            const sortedBedrooms = Object.entries(analytics.bedroom_distribution).sort((a, b) => a[0] - b[0]);
+            
+            for (const [beds, count] of sortedBedrooms) {
+                const percentage = (count / maxBedCount) * 100;
+                html += `
+                    <div class="bar-item">
+                        <div class="bar-label">${beds} Bedrooms</div>
+                        <div class="bar" style="width: ${percentage}%">${count}</div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            analyticsDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

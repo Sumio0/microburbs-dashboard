@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>简单测试页面</title>
+    <style>
+        body { font-family: Arial; margin: 40px; }
+        .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .info { background: #d1ecf1; color: #0c5460; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 API 测试页面</h1>
+    <p>这是一个简单的测试页面，用来验证 API 是否正常工作。</p>
+    
+    <button onclick="testAPI()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">
+        🚀 点击测试 API
+    </button>
+    
+    <div id="result"></div>
+
+    <script>
+        console.log('✅ Test page loaded successfully!');
+        
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="info">⏳ 正在测试...</div>';
+            
+            try {
+                console.log('Step 1: Fetching data...');
+                const response = await fetch('/search?suburb=Belmont+North');
+                
+                console.log('Step 2: Response received');
+                console.log('Status:', response.status);
+                console.log('Content-Type:', response.headers.get('content-type'));
+                
+                const text = await response.text();
+                console.log('Step 3: Raw response (first 500 chars):', text.substring(0, 500));
+                
+                const data = JSON.parse(text);
+                console.log('Step 4: JSON parsed successfully!');
+                console.log('Data:', data);
+                
+                // Display results
+                let html = '<div class="success">';
+                html += '<h2>✅ API 测试成功！</h2>';
+                html += '<p><strong>找到房产数量:</strong> ' + data.length + '</p>';
+                html += '<p><strong>第一个房产:</strong></p>';
+                html += '<pre>' + JSON.stringify(data[0], null, 2) + '</pre>';
+                html += '</div>';
+                
+                // Test price formatting
+                html += '<div class="info">';
+                html += '<h3>🧪 价格格式化测试</h3>';
+                const price = data[0].price;
+                console.log('Testing price:', price, 'Type:', typeof price);
+                
+                try {
+                    const formatted1 = '$' + Math.round(Number(price)).toLocaleString('en-US');
+                    html += '<p>✅ 方法1 (toLocaleString): ' + formatted1 + '</p>';
+                } catch (e) {
+                    html += '<p>❌ 方法1 失败: ' + e.message + '</p>';
+                }
+                
+                try {
+                    const formatted2 = '$' + Math.round(price).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    html += '<p>✅ 方法2 (regex): ' + formatted2 + '</p>';
+                } catch (e) {
+                    html += '<p>❌ 方法2 失败: ' + e.message + '</p>';
+                }
+                
+                html += '</div>';
+                
+                resultDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h2>❌ 测试失败</h2>
+                        <p><strong>错误:</strong> ${error.message}</p>
+                        <p><strong>详细信息:</strong> ${error.stack}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Auto-run test on page load
+        window.addEventListener('load', function() {
+            console.log('Page loaded, auto-running test in 1 second...');
+            setTimeout(testAPI, 1000);
+        });
+    </script>
+</body>
+</html>
+
